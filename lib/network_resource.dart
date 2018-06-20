@@ -10,7 +10,7 @@ import 'package:meta/meta.dart';
 /// A class to fetch data from the network, cache it in a file, and hold it
 /// in memory. Use the [StringNetworkResource], [StringListNetworkResource], or
 /// [BinaryNetworkResource] depending on your data type.
-abstract class _NetworkResource<T> {
+abstract class NetworkResource<T> {
   final String url;
   final String filename;
   final Duration maxAge;
@@ -22,7 +22,7 @@ abstract class _NetworkResource<T> {
   File __file;
   T _data;
 
-  _NetworkResource(
+  NetworkResource(
       {
 
       /// The data to fetch and cache.
@@ -99,7 +99,7 @@ abstract class _NetworkResource<T> {
 
 /// A class to fetch [String] data from the network, cache it in a file, and hold
 /// it in memory.
-class StringNetworkResource extends _NetworkResource<String> {
+class StringNetworkResource extends NetworkResource<String> {
   final Encoding encoding;
   StringNetworkResource(
       {
@@ -149,7 +149,7 @@ class StringNetworkResource extends _NetworkResource<String> {
 
 /// A class to fetch [List<String>] data from the network, cache it in a file,
 /// and hold it in memory.
-class StringListNetworkResource extends _NetworkResource<List<String>> {
+class StringListNetworkResource extends NetworkResource<List<String>> {
   final Encoding encoding;
   StringListNetworkResource(
       {
@@ -199,7 +199,7 @@ class StringListNetworkResource extends _NetworkResource<List<String>> {
 
 /// A class to fetch [List<int>] data from the network (bytes), cache it in a
 /// file, and hold it in memory.
-class BinaryNetworkResource extends _NetworkResource<List<int>> {
+class BinaryNetworkResource extends NetworkResource<List<int>> {
   BinaryNetworkResource(
       {
 
