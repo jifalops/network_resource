@@ -35,7 +35,7 @@ abstract class NetworkResource<T> {
       @required this.maxAge,
 
       /// If not defined, the application's data directory will be used.
-      /// Do NOT use a trailing slash.
+      /// Do NOT include a trailing slash.
       this.path,
 
       /// Optional. The [http.Client] to use, recommended if frequently hitting
