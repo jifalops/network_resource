@@ -18,9 +18,10 @@ import 'package:meta/meta.dart';
 /// in memory.
 ///
 /// Use the [StringNetworkResource], [StringListNetworkResource], or
-/// [BinaryNetworkResource] depending on your data type.
+/// [BinaryNetworkResource] depending on your data type; or extend and create
+/// your own.
 abstract class NetworkResource<T> {
-  /// The data to fetch and cache.
+  /// The location of the data to fetch and cache.
   final String url;
 
   /// The file name to use for the cached copy.
@@ -29,10 +30,6 @@ abstract class NetworkResource<T> {
   /// Determines when the cached copy has expired.
   final Duration maxAge;
 
-  /// If not defined, the application's data directory will be used.
-  /// Do NOT include a trailing slash.
-  final String path;
-
   /// Optional. The [http.Client] to use, recommended if frequently hitting
   /// the same server. If not specified, [http.get()] will be used instead.
   final http.Client client;
@@ -40,35 +37,52 @@ abstract class NetworkResource<T> {
   /// Optional. The HTTP headers to send with the request.
   final Map<String, String> headers;
 
-  String __path;
-  File __file;
+  /// Whether the raw data being fetched is binary or encoded as a string.
+  final bool isBinary;
+
+  /// The string encoding to use when the raw data fetched is non-binary.
+  final Encoding encoding;
+
+  String _path;
+  File _file;
   T _data;
 
+  /// If [path] is not defined, the application's data directory will be used.
+  /// Do NOT include a trailing slash.
   NetworkResource(
       {@required this.url,
       @required this.filename,
-      @required this.maxAge,
-      this.path,
+      @required this.isBinary,
+      this.maxAge,
+      this.encoding: utf8,
+      String path,
       this.client,
-      this.headers});
+      this.headers})
+      : _path = path;
 
   T get data => _data;
 
-  Future<String> get _path async => __path ??=
-      path != null ? path : (await getApplicationDocumentsDirectory()).path;
+  Future<String> get path async =>
+      _path ??= (await getApplicationDocumentsDirectory()).path;
 
-  Future<File> get cacheFile async =>
-      __file ??= File('${await _path}/$filename');
+  Future<File> get cacheFile async => _file ??= File('${await path}/$filename');
 
-  Future<bool> get isCached async => (await cacheFile)?.exists() ?? false;
+  Future<bool> get isCached async => (await cacheFile)?.existsSync() ?? false;
 
+  /// Returns `true` if the file does not exist, `false` if the file exists but
+  /// [maxAge] is null; otherwise compares the [cacheFile]'s age to [maxAge].
   Future<bool> get isExpired async {
     final file = await cacheFile;
-    return (await file.exists())
-        ? DateTime.now().difference(await file.lastModified()) > maxAge
+    return file.existsSync()
+        ? (maxAge != null
+            ? DateTime.now().difference(file.lastModifiedSync()) > maxAge
+            : false)
         : true;
   }
 
+  /// Retrieve the most readily available data in the order of RAM, cache,
+  /// then network. If [forceReload] is `true` then [getFromNetwork()] will be
+  /// called, using the cache as a fallback if the network request fails.
   Future<T> get({bool forceReload = false}) async {
     if (_data != null && !forceReload) {
       return _data;
@@ -87,8 +101,9 @@ abstract class NetworkResource<T> {
         : client.get(url, headers: headers));
     if (response.statusCode == HttpStatus.OK) {
       print('$url Fetched. Updating cache...');
-      _writeToCache(response);
-      return _data = _parseResponse(response);
+      var contents = isBinary ? response.bodyBytes : response.body;
+      _writeToCache(contents);
+      return _data = parseContents(contents);
     } else {
       print('$url Fetch failed (${response.statusCode}).');
       if (useCacheFallback) {
@@ -101,85 +116,74 @@ abstract class NetworkResource<T> {
     }
   }
 
-  T _parseResponse(http.Response response);
-  Future<void> _writeToCache(http.Response response);
-  Future<T> getFromCache();
+  void _writeToCache(dynamic contents) async {
+    final file = await cacheFile;
+    if (isBinary) {
+      file.writeAsBytesSync(contents);
+    } else {
+      file.writeAsStringSync(contents, encoding: encoding);
+    }
+  }
+
+  Future<T> getFromCache() async {
+    final file = await cacheFile;
+    return file.existsSync()
+        ? (isBinary
+            ? _data = parseContents(file.readAsBytesSync())
+            : _data = parseContents(file.readAsStringSync(encoding: encoding)))
+        : null;
+  }
+
+  /// Parse the [String] or [List<int>] into the desired type.
+  T parseContents(dynamic contents);
 }
 
 /// A class to fetch [String] data from the network, cache it in a file, and hold
 /// it in memory.
 class StringNetworkResource extends NetworkResource<String> {
-  /// The [Encoding] to use for non-binary [ContentType]s.
-  final Encoding encoding;
   StringNetworkResource(
       {@required String url,
       @required String filename,
-      @required Duration maxAge,
-      this.encoding: utf8,
+      Duration maxAge,
+      Encoding encoding: utf8,
       String path,
       http.Client client,
       Map<String, String> headers})
       : super(
             url: url,
             filename: filename,
+            isBinary: false,
             maxAge: maxAge,
+            encoding: encoding,
             path: path,
             client: client,
             headers: headers);
-
   @override
-  String _parseResponse(http.Response response) {
-    return response.body;
-  }
-
-  @override
-  Future _writeToCache(http.Response response) async {
-    (await cacheFile).writeAsString(response.body, encoding: encoding);
-  }
-
-  @override
-  Future<String> getFromCache() async {
-    final file = await cacheFile;
-    return file.existsSync() ? file.readAsStringSync(encoding: encoding) : null;
-  }
+  String parseContents(contents) => contents;
 }
 
 /// A class to fetch [List<String>] data from the network, cache it in a file,
 /// and hold it in memory.
 class StringListNetworkResource extends NetworkResource<List<String>> {
-  /// The [Encoding] to use for non-binary [ContentType]s.
-  final Encoding encoding;
   StringListNetworkResource(
       {@required String url,
       @required String filename,
-      @required Duration maxAge,
-      this.encoding: utf8,
+      Duration maxAge,
+      Encoding encoding: utf8,
       String path,
       http.Client client,
       Map<String, String> headers})
       : super(
             url: url,
             filename: filename,
+            isBinary: false,
             maxAge: maxAge,
+            encoding: encoding,
             path: path,
             client: client,
             headers: headers);
-
   @override
-  List<String> _parseResponse(http.Response response) {
-    return response.body.split(RegExp(r'\r?\n'));
-  }
-
-  @override
-  Future _writeToCache(http.Response response) async {
-    (await cacheFile).writeAsString(response.body, encoding: encoding);
-  }
-
-  @override
-  Future<List<String>> getFromCache() async {
-    final file = await cacheFile;
-    return file.existsSync() ? file.readAsLinesSync(encoding: encoding) : null;
-  }
+  List<String> parseContents(contents) => contents.split(RegExp(r'\r?\n'));
 }
 
 /// A class to fetch [List<int>] data from the network (bytes), cache it in a
@@ -188,31 +192,20 @@ class BinaryNetworkResource extends NetworkResource<List<int>> {
   BinaryNetworkResource(
       {@required String url,
       @required String filename,
-      @required Duration maxAge,
+      Duration maxAge,
+      Encoding encoding: utf8,
       String path,
       http.Client client,
       Map<String, String> headers})
       : super(
             url: url,
             filename: filename,
+            isBinary: true,
             maxAge: maxAge,
+            encoding: encoding,
             path: path,
             client: client,
             headers: headers);
-
   @override
-  List<int> _parseResponse(http.Response response) {
-    return response.bodyBytes;
-  }
-
-  @override
-  Future _writeToCache(http.Response response) async {
-    (await cacheFile).writeAsBytes(response.bodyBytes);
-  }
-
-  @override
-  Future<List<int>> getFromCache() async {
-    final file = await cacheFile;
-    return file.existsSync() ? file.readAsBytes() : null;
-  }
+  List<int> parseContents(contents) => contents;
 }

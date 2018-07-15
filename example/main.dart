@@ -1,28 +1,37 @@
+// This example subclasses `NetworkResource` to manage fetching and parsing
+// an event list in JSON format. Items are shown in a list with pull-to-refresh.
+
 import 'dart:async';
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../lib/network_resource.dart';
 
-// The events resource.
-final eventsResource = StringNetworkResource(
-  url: 'http://example.com/events.json',
-  filename: 'events.json',
-  maxAge: Duration(minutes: 60),
-);
-
-// Parse the JSON string into a local data type.
-List<Event> parseEvents(String data) {
-  List<Event> events;
-  json.decode(data).forEach((item) => events.add(Event(item)));
-  return events;
+class Event {
+  final String title;
+  Event(this.title);
 }
+
+class EventListResource extends NetworkResource<List<Event>> {
+  EventListResource()
+      : super(
+            url: 'http://example.com/events.json',
+            filename: 'events.json',
+            maxAge: Duration(minutes: 60),
+            isBinary: false);
+  @override
+  List<Event> parseContents(contents) {
+    List events;
+    json.decode(contents).forEach((item) => events.add(Event(item)));
+    return events;
+  }
+}
+
+final eventsResource = EventListResource();
 
 // The Widget's state, with pull to refresh.
 class _EventListState extends State<EventList> {
   Future<Null> refresh() async {
-    var data = await eventsResource.get(forceReload: true);
-    widget.events.clear();
-    widget.events.addAll(parseEvents(data));
+    await eventsResource.get(forceReload: true);
     setState(() {});
   }
 
@@ -33,29 +42,22 @@ class _EventListState extends State<EventList> {
             onRefresh: refresh,
             child: ListView.builder(
                 itemBuilder: (context, index) =>
-                    Text(widget.events[index].title))));
+                    Text(eventsResource.data[index].title))));
   }
 }
 
 class EventList extends StatefulWidget {
-  final List<Event> events;
-  EventList(this.events);
   @override
   _EventListState createState() => _EventListState();
 }
 
-class Event {
-  final String title;
-  Event(this.title);
-}
-
 void main() => runApp(MaterialApp(
     title: 'Network Resource example',
-    home: FutureBuilder<String>(
+    home: FutureBuilder<List<Event>>(
       future: eventsResource.get(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          return EventList(parseEvents(snapshot.data));
+          return EventList();
         } else if (snapshot.hasError) {
           return Text('${snapshot.error}');
         }
