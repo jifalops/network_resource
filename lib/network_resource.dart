@@ -193,7 +193,6 @@ class BinaryNetworkResource extends NetworkResource<List<int>> {
       {@required String url,
       @required String filename,
       Duration maxAge,
-      Encoding encoding: utf8,
       String path,
       http.Client client,
       Map<String, String> headers})
@@ -202,7 +201,6 @@ class BinaryNetworkResource extends NetworkResource<List<int>> {
             filename: filename,
             isBinary: true,
             maxAge: maxAge,
-            encoding: encoding,
             path: path,
             client: client,
             headers: headers);
