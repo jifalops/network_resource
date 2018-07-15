@@ -9,6 +9,7 @@ the cache will be updated from the network if available. To manually refresh, us
 or `getFromNetwork()`. The latter can be used to avoid cache fallback.
 
 ## Example
+
 There are three concrete classes included.
 
 * `StringNetworkResource`

@@ -1,3 +1,8 @@
+## [0.0.4] - July 15, 2018
+
+* Return data without waiting for cache write to finish.
+* Many documentation improvements.
+
 ## [0.0.3] - June 13, 2018
 
 * Breaking: NetworkResource is now abstract. You must use StringNetworkResource, StringListNetworkResource, BinaryNetworkResource, or extend and create your own.
