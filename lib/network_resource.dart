@@ -1,3 +1,10 @@
+/// Automatically cache network resources and use them when offline.
+///
+/// [NetworkResource<T>] fetches data over HTTP, caches it in a file, and holds it in memory.
+/// The main method, [NetworkResource.get()], will return the value in memory, cache,
+/// or fetch from the network -- in that order. If the cache file is older than [NetworkResource.maxAge],
+/// the cache will be updated from the network if available. To manually refresh, use `get(forceReload: true)`
+/// or [NetworkResource.getFromNetwork()]. The latter can be used to avoid cache fallback.
 library network_resource;
 
 import 'dart:io';
@@ -7,15 +14,30 @@ import 'package:path_provider/path_provider.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
-/// A class to fetch data from the network, cache it in a file, and hold it
-/// in memory. Use the [StringNetworkResource], [StringListNetworkResource], or
+/// A base implementation to fetch data over HTTP, cache it in a file, and hold it
+/// in memory.
+///
+/// Use the [StringNetworkResource], [StringListNetworkResource], or
 /// [BinaryNetworkResource] depending on your data type.
 abstract class NetworkResource<T> {
+  /// The data to fetch and cache.
   final String url;
+
+  /// The file name to use for the cached copy.
   final String filename;
+
+  /// Determines when the cached copy has expired.
   final Duration maxAge;
+
+  /// If not defined, the application's data directory will be used.
+  /// Do NOT include a trailing slash.
   final String path;
+
+  /// Optional. The [http.Client] to use, recommended if frequently hitting
+  /// the same server. If not specified, [http.get()] will be used instead.
   final http.Client client;
+
+  /// Optional. The HTTP headers to send with the request.
   final Map<String, String> headers;
 
   String __path;
@@ -23,26 +45,11 @@ abstract class NetworkResource<T> {
   T _data;
 
   NetworkResource(
-      {
-
-      /// The data to fetch and cache.
-      @required this.url,
-
-      /// The file name to use for the cached copy.
+      {@required this.url,
       @required this.filename,
-
-      /// Determines when the cached copy has expired.
       @required this.maxAge,
-
-      /// If not defined, the application's data directory will be used.
-      /// Do NOT include a trailing slash.
       this.path,
-
-      /// Optional. The [http.Client] to use, recommended if frequently hitting
-      /// the same server. If not specified, [http.get()] will be used instead.
       this.client,
-
-      /// Optional. The HTTP headers to send with the request.
       this.headers});
 
   T get data => _data;
@@ -80,7 +87,8 @@ abstract class NetworkResource<T> {
         : client.get(url, headers: headers));
     if (response.statusCode == HttpStatus.OK) {
       print('$url Fetched. Updating cache...');
-      return _data = await _writeToCache(response);
+      _writeToCache(response);
+      return _data = _parseResponse(response);
     } else {
       print('$url Fetch failed (${response.statusCode}).');
       if (useCacheFallback) {
@@ -93,38 +101,23 @@ abstract class NetworkResource<T> {
     }
   }
 
+  T _parseResponse(http.Response response);
+  Future<void> _writeToCache(http.Response response);
   Future<T> getFromCache();
-  Future<T> _writeToCache(http.Response response);
 }
 
 /// A class to fetch [String] data from the network, cache it in a file, and hold
 /// it in memory.
 class StringNetworkResource extends NetworkResource<String> {
+  /// The [Encoding] to use for non-binary [ContentType]s.
   final Encoding encoding;
   StringNetworkResource(
-      {
-
-      /// The data to fetch and cache.
-      @required String url,
-
-      /// The file name to use for the cached copy.
+      {@required String url,
       @required String filename,
-
-      /// Determines when the cached copy has expired.
       @required Duration maxAge,
-
-      /// The [Encoding] to use for non-binary [ContentType]s.
       this.encoding: utf8,
-
-      /// If not defined, the application's data directory will be used.
-      /// Do NOT use a trailing slash.
       String path,
-
-      /// Optional. The [http.Client] to use, recommended if frequently hitting
-      /// the same server. If not specified, [http.get()] will be used instead.
       http.Client client,
-
-      /// Optional. The HTTP headers to send with the request.
       Map<String, String> headers})
       : super(
             url: url,
@@ -135,9 +128,13 @@ class StringNetworkResource extends NetworkResource<String> {
             headers: headers);
 
   @override
-  Future<String> _writeToCache(http.Response response) async {
-    (await cacheFile).writeAsString(response.body, encoding: encoding);
+  String _parseResponse(http.Response response) {
     return response.body;
+  }
+
+  @override
+  Future _writeToCache(http.Response response) async {
+    (await cacheFile).writeAsString(response.body, encoding: encoding);
   }
 
   @override
@@ -150,31 +147,15 @@ class StringNetworkResource extends NetworkResource<String> {
 /// A class to fetch [List<String>] data from the network, cache it in a file,
 /// and hold it in memory.
 class StringListNetworkResource extends NetworkResource<List<String>> {
+  /// The [Encoding] to use for non-binary [ContentType]s.
   final Encoding encoding;
   StringListNetworkResource(
-      {
-
-      /// The data to fetch and cache.
-      @required String url,
-
-      /// The file name to use for the cached copy.
+      {@required String url,
       @required String filename,
-
-      /// Determines when the cached copy has expired.
       @required Duration maxAge,
-
-      /// The [Encoding] to use for non-binary [ContentType]s.
       this.encoding: utf8,
-
-      /// If not defined, the application's data directory will be used.
-      /// Do NOT use a trailing slash.
       String path,
-
-      /// Optional. The [http.Client] to use, recommended if frequently hitting
-      /// the same server. If not specified, [http.get()] will be used instead.
       http.Client client,
-
-      /// Optional. The HTTP headers to send with the request.
       Map<String, String> headers})
       : super(
             url: url,
@@ -185,9 +166,13 @@ class StringListNetworkResource extends NetworkResource<List<String>> {
             headers: headers);
 
   @override
-  Future<List<String>> _writeToCache(http.Response response) async {
-    (await cacheFile).writeAsString(response.body, encoding: encoding);
+  List<String> _parseResponse(http.Response response) {
     return response.body.split(RegExp(r'\r?\n'));
+  }
+
+  @override
+  Future _writeToCache(http.Response response) async {
+    (await cacheFile).writeAsString(response.body, encoding: encoding);
   }
 
   @override
@@ -201,26 +186,11 @@ class StringListNetworkResource extends NetworkResource<List<String>> {
 /// file, and hold it in memory.
 class BinaryNetworkResource extends NetworkResource<List<int>> {
   BinaryNetworkResource(
-      {
-
-      /// The data to fetch and cache.
-      @required String url,
-
-      /// The file name to use for the cached copy.
+      {@required String url,
       @required String filename,
-
-      /// Determines when the cached copy has expired.
       @required Duration maxAge,
-
-      /// If not defined, the application's data directory will be used.
-      /// Do NOT use a trailing slash.
       String path,
-
-      /// Optional. The [http.Client] to use, recommended if frequently hitting
-      /// the same server. If not specified, [http.get()] will be used instead.
       http.Client client,
-
-      /// Optional. The HTTP headers to send with the request.
       Map<String, String> headers})
       : super(
             url: url,
@@ -231,9 +201,13 @@ class BinaryNetworkResource extends NetworkResource<List<int>> {
             headers: headers);
 
   @override
-  Future<List<int>> _writeToCache(http.Response response) async {
-    (await cacheFile).writeAsBytes(response.bodyBytes);
+  List<int> _parseResponse(http.Response response) {
     return response.bodyBytes;
+  }
+
+  @override
+  Future _writeToCache(http.Response response) async {
+    (await cacheFile).writeAsBytes(response.bodyBytes);
   }
 
   @override

@@ -1,45 +1,64 @@
+import 'dart:async';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import '../lib/network_resource.dart';
 
-final _resource1 = StringNetworkResource(
-  url: 'http://example.com/resource1.json',
-  filename: 'resource1.json',
+// The events resource.
+final eventsResource = StringNetworkResource(
+  url: 'http://example.com/events.json',
+  filename: 'events.json',
   maxAge: Duration(minutes: 60),
 );
 
-class MyHomePageState extends State<MyHomePage> {
+// Parse the JSON string into a local data type.
+List<Event> parseEvents(String data) {
+  List<Event> events;
+  json.decode(data).forEach((item) => events.add(Event(item)));
+  return events;
+}
+
+// The Widget's state, with pull to refresh.
+class _EventListState extends State<EventList> {
+  Future<Null> refresh() async {
+    var data = await eventsResource.get(forceReload: true);
+    widget.events.clear();
+    widget.events.addAll(parseEvents(data));
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-        body: FutureBuilder<String>(
-      future: _resource1.get(),
+        body: RefreshIndicator(
+            onRefresh: refresh,
+            child: ListView.builder(
+                itemBuilder: (context, index) =>
+                    Text(widget.events[index].title))));
+  }
+}
+
+class EventList extends StatefulWidget {
+  final List<Event> events;
+  EventList(this.events);
+  @override
+  _EventListState createState() => _EventListState();
+}
+
+class Event {
+  final String title;
+  Event(this.title);
+}
+
+void main() => runApp(MaterialApp(
+    title: 'Network Resource example',
+    home: FutureBuilder<String>(
+      future: eventsResource.get(),
       builder: (context, snapshot) {
         if (snapshot.hasData) {
-          return Text('${snapshot.data}');
+          return EventList(parseEvents(snapshot.data));
         } else if (snapshot.hasError) {
           return Text('${snapshot.error}');
         }
         return Center(child: CircularProgressIndicator());
       },
-    ));
-  }
-}
-
-void main() => runApp(new MyApp());
-
-class MyApp extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return new MaterialApp(
-      title: 'Network Resource example',
-      home: MyHomePage(),
-    );
-  }
-}
-
-class MyHomePage extends StatefulWidget {
-  @override
-  MyHomePageState createState() {
-    return new MyHomePageState();
-  }
-}
+    )));
