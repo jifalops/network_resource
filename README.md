@@ -77,7 +77,6 @@ class EventListResource extends NetworkResource<List<Event>> {
 
 final eventsResource = EventListResource();
 
-// The Widget's state, with pull to refresh.
 class _EventListState extends State<EventList> {
   Future<Null> refresh() async {
     await eventsResource.get(forceReload: true);
