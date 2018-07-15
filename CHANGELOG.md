@@ -1,3 +1,7 @@
+## [0.1.0] - July 15, 2018
+
+* Make `NetworkResource` easily extendable so that it can be adapted to any data type.
+
 ## [0.0.4] - July 15, 2018
 
 * Return data without waiting for cache write to finish.
