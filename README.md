@@ -20,21 +20,21 @@ There are three concrete classes included.
 // String data.
 final eventsResource = StringNetworkResource(
   url: 'https://example.com/events.json',
-  filename: 'events.json',
+  cacheFile: File('events.json'),
   maxAge: Duration(minutes: 60),
 );
 
 // Binary data.
 final photo = BinaryNetworkResource(
   url: 'https://example.com/photo.png',
-  filename: 'photo.png',
+  cacheFile: File('photo.png'),
   maxAge: Duration(hours: 24),
 );
 
 // A string list, line by line.
  final words = StringListNetworkResource(
   url: 'https://example.com/wordlist.txt',
-  filename: 'wordlist.txt',
+  cacheFile: File('wordlist.txt'),
   maxAge: Duration(hours: 24),
 );
 
@@ -46,12 +46,15 @@ json.decode(data).forEach((item) => events.add(Event(item)));
 Instead of declaring the resource and parsing its data separately, extend the
 base class and implement `parseContents(contents)` where either a `String` or `List<int>` will be passed, depending on the value of `isBinary`.
 
+While this example uses Flutter, the package is not dependent on Flutter. If you are using Flutter, try the [path provider](https://pub.dartlang.org/packages/path_provider) package to help specify where the cache file should be located.
+
 ```dart
 // This example subclasses `NetworkResource` to manage fetching and parsing
 // an event list in JSON format. Items are shown in a list with pull-to-refresh.
 
 import 'dart:async';
 import 'dart:convert';
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:network_resource/network_resource.dart';
 
@@ -64,7 +67,7 @@ class EventListResource extends NetworkResource<List<Event>> {
   EventListResource()
       : super(
             url: 'http://example.com/events.json',
-            filename: 'events.json',
+            cacheFile: File('events.json'),
             maxAge: Duration(minutes: 60),
             isBinary: false);
   @override

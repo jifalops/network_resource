@@ -10,7 +10,7 @@ library network_resource;
 import 'dart:io';
 import 'dart:async';
 import 'dart:convert';
-import 'package:path_provider/path_provider.dart';
+import 'package:path/path.dart';
 import 'package:http/http.dart' as http;
 import 'package:meta/meta.dart';
 
@@ -24,8 +24,9 @@ abstract class NetworkResource<T> {
   /// The location of the data to fetch and cache.
   final String url;
 
-  /// The file name to use for the cached copy.
-  final String filename;
+  /// The cached copy of the data fetched from [url]. Its parent directory must
+  /// exist.
+  final File cacheFile;
 
   /// Determines when the cached copy has expired.
   final Duration maxAge;
@@ -43,31 +44,24 @@ abstract class NetworkResource<T> {
   /// The string encoding to use when the raw data fetched is non-binary.
   final Encoding encoding;
 
-  String _path;
-  File _file;
   T _data;
+  String _filename;
 
   /// If [path] is not defined, the application's data directory will be used.
   /// Do NOT include a trailing slash.
   NetworkResource(
       {@required this.url,
-      @required this.filename,
+      @required this.cacheFile,
       @required this.isBinary,
       this.maxAge,
       this.encoding: utf8,
       String path,
       this.client,
-      this.headers})
-      : _path = path;
+      this.headers});
 
   T get data => _data;
 
-  Future<String> get path async =>
-      _path ??= (await getApplicationDocumentsDirectory()).path;
-
-  Future<File> get cacheFile async => _file ??= File('${await path}/$filename');
-
-  Future<bool> get isCached async => (await cacheFile)?.existsSync() ?? false;
+  String get filename => _filename ??= basename(cacheFile.path);
 
   /// Returns `true` if the file does not exist, `false` if the file exists but
   /// [maxAge] is null; otherwise compares the [cacheFile]'s age to [maxAge].
@@ -99,13 +93,13 @@ abstract class NetworkResource<T> {
     final response = await (client == null
         ? http.get(url, headers: headers)
         : client.get(url, headers: headers));
-    if (response.statusCode == HttpStatus.OK) {
+    if (response != null && response.statusCode == HttpStatus.OK) {
       print('$url Fetched. Updating cache...');
       var contents = isBinary ? response.bodyBytes : response.body;
       _writeToCache(contents);
       return _data = parseContents(contents);
     } else {
-      print('$url Fetch failed (${response.statusCode}).');
+      print('$url Fetch failed (${response?.statusCode ?? -1}).');
       if (useCacheFallback) {
         print('$url Using a cached copy if available.');
         return getFromCache();
@@ -143,7 +137,7 @@ abstract class NetworkResource<T> {
 class StringNetworkResource extends NetworkResource<String> {
   StringNetworkResource(
       {@required String url,
-      @required String filename,
+      @required File cacheFile,
       Duration maxAge,
       Encoding encoding: utf8,
       String path,
@@ -151,7 +145,7 @@ class StringNetworkResource extends NetworkResource<String> {
       Map<String, String> headers})
       : super(
             url: url,
-            filename: filename,
+            cacheFile: cacheFile,
             isBinary: false,
             maxAge: maxAge,
             encoding: encoding,
@@ -167,7 +161,7 @@ class StringNetworkResource extends NetworkResource<String> {
 class StringListNetworkResource extends NetworkResource<List<String>> {
   StringListNetworkResource(
       {@required String url,
-      @required String filename,
+      @required File cacheFile,
       Duration maxAge,
       Encoding encoding: utf8,
       String path,
@@ -175,7 +169,7 @@ class StringListNetworkResource extends NetworkResource<List<String>> {
       Map<String, String> headers})
       : super(
             url: url,
-            filename: filename,
+            cacheFile: cacheFile,
             isBinary: false,
             maxAge: maxAge,
             encoding: encoding,
@@ -191,14 +185,14 @@ class StringListNetworkResource extends NetworkResource<List<String>> {
 class BinaryNetworkResource extends NetworkResource<List<int>> {
   BinaryNetworkResource(
       {@required String url,
-      @required String filename,
+      @required File cacheFile,
       Duration maxAge,
       String path,
       http.Client client,
       Map<String, String> headers})
       : super(
             url: url,
-            filename: filename,
+            cacheFile: cacheFile,
             isBinary: true,
             maxAge: maxAge,
             path: path,

@@ -1,3 +1,9 @@
+## [0.2.0] - July 20, 2018
+
+* Breaking: a `File` must be passed instead of a file name.
+* Removed Flutter dependency.
+* Added unit tests.
+
 ## [0.1.0] - July 15, 2018
 
 * Make `NetworkResource` easily extendable so that it can be adapted to any data type.
