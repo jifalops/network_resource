@@ -69,7 +69,7 @@ abstract class NetworkResource<T> {
     final file = await cacheFile;
     return file.existsSync()
         ? (maxAge != null
-            ? DateTime.now().difference(file.lastModifiedSync()) > maxAge
+            ? new DateTime.now().difference(file.lastModifiedSync()) > maxAge
             : false)
         : true;
   }
@@ -177,7 +177,7 @@ class StringListNetworkResource extends NetworkResource<List<String>> {
             client: client,
             headers: headers);
   @override
-  List<String> parseContents(contents) => contents.split(RegExp(r'\r?\n'));
+  List<String> parseContents(contents) => contents.split(new RegExp(r'\r?\n'));
 }
 
 /// A class to fetch [List<int>] data from the network (bytes), cache it in a

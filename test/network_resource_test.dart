@@ -13,6 +13,7 @@ final binaryFile = 'test/binary.bin';
 
 final stringData = 'some data';
 final stringListData = 'some\nmore\r\ndata';
+final stringListDataList = ['some', 'more', 'data'];
 final binaryData = [0, 1, 2];
 
 void main() {
@@ -53,7 +54,7 @@ void main() {
       expect(await stringRes.get(), stringData);
     });
     test('String list data.', () async {
-      expect(await stringListRes.get(), stringListData);
+      expect(await stringListRes.get(), stringListDataList);
     });
     test('Binary data.', () async {
       expect(await binaryRes.get(), binaryData);
@@ -66,7 +67,7 @@ void main() {
       expect(await stringRes.getFromCache(), stringData);
     });
     test('String list file.', () async {
-      expect(await stringListRes.getFromCache(), stringListData);
+      expect(await stringListRes.getFromCache(), stringListDataList);
     });
     test('Binary file.', () async {
       expect(await binaryRes.getFromCache(), binaryData);
