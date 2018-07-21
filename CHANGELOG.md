@@ -1,3 +1,8 @@
+## [0.2.2] - July 21, 2018
+
+* Make dart-pub happy.
+* More documentation and tests.
+
 ## [0.2.1] - July 20, 2018
 
 * Fix missing dependency.
