@@ -82,10 +82,10 @@ void main() {
 
   test('Getting expired data automatically refreshes from the network.',
       () async {
-    final expiredTime = await expiredRes.cacheFile.lastModified();
-    expect(await expiredRes.get(), stringData);
-    expect(
-        expiredTime.isBefore(await expiredRes.cacheFile.lastModified()), true);
+    final oldTime = await expiredRes.cacheFile.lastModified();
+    await expiredRes.get(flush: true);
+    final newTime = expiredRes.cacheFile.lastModifiedSync();
+    expect(oldTime.isBefore(newTime), true);
   });
 
   test('Cleanup created files', () async {

@@ -79,26 +79,32 @@ abstract class NetworkResource<T> {
   /// Retrieve the most readily available data in the order of RAM, cache,
   /// then network. If [forceReload] is `true` then [getFromNetwork()] will be
   /// called, using the cache as a fallback if the network request fails.
-  Future<T> get({bool forceReload = false}) async {
+  /// If [flush] is true and the data is fetched from the network, the cache file
+  /// write is flushed to the file system before returning.
+  Future<T> get({bool forceReload = false, bool flush = false}) async {
     if (_data != null && !forceReload) {
       return _data;
     } else if (forceReload || await isExpired) {
       print('$filename: Fetching from $url');
-      return _data = await getFromNetwork();
+      return _data = await getFromNetwork(flush: flush);
     } else {
       print('Loading cached copy of $filename');
       return _data = await getFromCache();
     }
   }
 
-  Future<T> getFromNetwork({useCacheFallback = true}) async {
+  Future<T> getFromNetwork({useCacheFallback = true, bool flush = false}) async {
     final response = await (client == null
         ? http.get(url, headers: headers)
         : client.get(url, headers: headers));
     if (response != null && response.statusCode == HttpStatus.ok) {
       print('$url Fetched. Updating cache...');
       var contents = isBinary ? response.bodyBytes : response.body;
-      _writeToCache(contents);
+      if (flush) {
+        await _writeToCache(contents, true);
+      } else {
+        _writeToCache(contents);
+      }
       return _data = parseContents(contents);
     } else {
       print('$url Fetch failed (${response?.statusCode ?? -1}).');
@@ -112,12 +118,12 @@ abstract class NetworkResource<T> {
     }
   }
 
-  void _writeToCache(dynamic contents) async {
+  void _writeToCache(dynamic contents, [bool flush = false]) async {
     final file = await cacheFile;
     if (isBinary) {
-      file.writeAsBytesSync(contents);
+      file.writeAsBytesSync(contents, flush: flush);
     } else {
-      file.writeAsStringSync(contents, encoding: encoding);
+      file.writeAsStringSync(contents, encoding: encoding, flush: flush);
     }
   }
 
