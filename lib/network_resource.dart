@@ -25,7 +25,9 @@ abstract class NetworkResource<T> {
   final String url;
 
   /// The cached copy of the data fetched from [url]. Its parent directory must
-  /// exist.
+  /// exist. If you are using Flutter, try the
+  /// [path provider](https://pub.dartlang.org/packages/path_provider) package
+  /// to help specify where the cache file should be located.
   final File cacheFile;
 
   /// Determines when the cached copy has expired.
@@ -93,7 +95,7 @@ abstract class NetworkResource<T> {
     final response = await (client == null
         ? http.get(url, headers: headers)
         : client.get(url, headers: headers));
-    if (response != null && response.statusCode == HttpStatus.OK) {
+    if (response != null && response.statusCode == HttpStatus.ok) {
       print('$url Fetched. Updating cache...');
       var contents = isBinary ? response.bodyBytes : response.body;
       _writeToCache(contents);

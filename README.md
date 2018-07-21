@@ -35,7 +35,6 @@ final photo = BinaryNetworkResource(
  final words = StringListNetworkResource(
   url: 'https://example.com/wordlist.txt',
   cacheFile: File('wordlist.txt'),
-  maxAge: Duration(hours: 24),
 );
 
 // Parsing a JSON string into a `List<Event>`.
@@ -43,6 +42,7 @@ json.decode(data).forEach((item) => events.add(Event(item)));
 ```
 
 ### Extend
+
 Instead of declaring the resource and parsing its data separately, extend the
 base class and implement `parseContents(contents)` where either a `String` or `List<int>` will be passed, depending on the value of `isBinary`.
 
