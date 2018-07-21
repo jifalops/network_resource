@@ -93,7 +93,8 @@ abstract class NetworkResource<T> {
     }
   }
 
-  Future<T> getFromNetwork({useCacheFallback = true, bool flush = false}) async {
+  Future<T> getFromNetwork(
+      {useCacheFallback = true, bool flush = false}) async {
     final response = await (client == null
         ? http.get(url, headers: headers)
         : client.get(url, headers: headers));
