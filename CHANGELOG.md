@@ -1,3 +1,7 @@
+## [0.2.1] - July 20, 2018
+
+* Fix missing dependency.
+
 ## [0.2.0] - July 20, 2018
 
 * Breaking: a `File` must be passed instead of a file name.
