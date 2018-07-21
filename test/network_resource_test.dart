@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:async';
 import 'package:test/test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:network_resource/network_resource.dart';
@@ -80,17 +81,20 @@ void main() {
     expect(await errorRes.get(forceReload: true), stringData);
   });
 
+  // This usually fails because the modified times are usually equal even
+  // when the file is overwritten.
   test('Getting expired data automatically refreshes from the network.',
       () async {
     final oldTime = await expiredRes.cacheFile.lastModified();
     await expiredRes.get(flush: true);
-    final newTime = expiredRes.cacheFile.lastModifiedSync();
+    await new Future.delayed(new Duration(seconds: 2));
+    final newTime = new File(expiredRes.cacheFile.path).lastModifiedSync();
     expect(oldTime.isBefore(newTime), true);
   });
 
   test('Cleanup created files', () async {
-    await stringRes.cacheFile.delete();
-    await stringListRes.cacheFile.delete();
-    await binaryRes.cacheFile.delete();
+    expect((await stringRes.cacheFile.delete()).existsSync(), false);
+    expect((await stringListRes.cacheFile.delete()).existsSync(), false);
+    expect((await binaryRes.cacheFile.delete()).existsSync(), false);
   });
 }
