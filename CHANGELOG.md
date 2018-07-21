@@ -1,3 +1,7 @@
+## [0.2.3] - July 21, 2018
+
+* Downgrade dependency due to conflict with flutter_test.
+
 ## [0.2.2] - July 21, 2018
 
 * Make dart-pub happy.
