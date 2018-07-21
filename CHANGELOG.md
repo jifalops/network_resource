@@ -1,4 +1,4 @@
-## [0.2.3] - July 21, 2018
+## [0.2.4] - July 21, 2018
 
 * Downgrade dependency due to conflict with flutter_test.
 

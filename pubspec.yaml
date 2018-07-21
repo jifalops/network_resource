@@ -1,12 +1,12 @@
 name: network_resource
 description: Automatically cache network resources and use them when offline.
-version: 0.2.3
+version: 0.2.4
 author: Jacob Phillips <jifalops@gmail.com>
 homepage: https://github.com/jifalops/network_resource
 
 dependencies:
   http: ^0.11.3+16
-  meta: ^1.1.6
+  meta: ^1.1.5
   path: ^1.6.1
 
 dev_dependencies:
