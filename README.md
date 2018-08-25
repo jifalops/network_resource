@@ -1,4 +1,6 @@
-# network_resource
+# ~~network_resource~~
+
+## Deprecated in favor of [async_resource](https://pub.dartlang.org/packages/async_resource).
 
 Automatically cache network resources and use them when offline.
 

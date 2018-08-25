@@ -1,3 +1,7 @@
+## [0.2.5] - August 25, 2018
+
+* Deprecated in favor of async_resource.
+
 ## [0.2.4] - July 21, 2018
 
 * Downgrade dependency due to conflict with flutter_test.

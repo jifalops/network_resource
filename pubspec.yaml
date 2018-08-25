@@ -1,6 +1,6 @@
 name: network_resource
-description: Automatically cache network resources and use them when offline.
-version: 0.2.4
+description: Deprecated in favor of async_resource. Automatically cache network resources and use them when offline.
+version: 0.2.5
 author: Jacob Phillips <jifalops@gmail.com>
 homepage: https://github.com/jifalops/network_resource
 
